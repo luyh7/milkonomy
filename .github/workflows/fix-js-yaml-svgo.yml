@@ -1,0 +1,57 @@
+name: Temporary js-yaml and svgo security fix
+
+on:
+  push:
+    branches:
+      - fix/js-yaml-svgo-alerts
+    paths:
+      - .github/workflows/fix-js-yaml-svgo.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Update vulnerable transitive dependencies
+        run: pnpm update js-yaml svgo --depth Infinity --lockfile-only
+
+      - name: Verify patched versions
+        run: |
+          ! grep -q "js-yaml@4.1.0" pnpm-lock.yaml
+          grep -q "js-yaml@4.3.1" pnpm-lock.yaml
+          ! grep -q "svgo@2.8.0" pnpm-lock.yaml
+          ! grep -q "svgo@3.3.2" pnpm-lock.yaml
+          grep -q "svgo@2.8.3" pnpm-lock.yaml
+          grep -q "svgo@3.3.4" pnpm-lock.yaml
+
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Commit generated lockfile
+        env:
+          HUSKY: 0
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(deps): patch js-yaml and svgo vulnerabilities"
+            git push
+          fi
