@@ -4,15 +4,12 @@ on:
   push:
     branches:
       - fix/xmldom-ghsa-c7q8-3ch8-vqpv
-    paths:
-      - .github/workflows/fix-xmldom-lock.yml
 
 permissions:
   contents: write
 
 jobs:
   update-lockfile:
-    if: github.event.head_commit.message == 'chore: run xmldom lockfile updater'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,10 +25,10 @@ jobs:
         with:
           version: 9.15.0
 
-      - name: Update vulnerable transitive dependency
-        run: pnpm update @xmldom/xmldom --depth Infinity --lockfile-only --no-save
+      - name: Update xmldom lockfile entry
+        run: pnpm update @xmldom/xmldom --depth Infinity --lockfile-only
 
-      - name: Verify fixed lockfile
+      - name: Verify patched version
         run: |
           ! grep -q "'@xmldom/xmldom@0.8.10'" pnpm-lock.yaml
           grep -q "'@xmldom/xmldom@0.8.15'" pnpm-lock.yaml
@@ -41,11 +38,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
-      - name: Commit lockfile and remove temporary workflow
+      - name: Commit generated lockfile
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm .github/workflows/fix-xmldom-lock.yml
-          git add pnpm-lock.yaml .github/workflows/fix-xmldom-lock.yml
-          git commit -m "fix(deps): update @xmldom/xmldom to 0.8.15"
-          git push
+          git add pnpm-lock.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(deps): update @xmldom/xmldom to 0.8.15"
+            git push
+          fi
