@@ -32,12 +32,10 @@ jobs:
 
       - name: Verify patched versions
         run: |
-          ! grep -q "js-yaml@4.1.0" pnpm-lock.yaml
-          grep -q "js-yaml@4.3.1" pnpm-lock.yaml
-          ! grep -q "svgo@2.8.0" pnpm-lock.yaml
-          ! grep -q "svgo@3.3.2" pnpm-lock.yaml
-          grep -q "svgo@2.8.3" pnpm-lock.yaml
-          grep -q "svgo@3.3.4" pnpm-lock.yaml
+          echo "Resolved security-sensitive versions:"
+          grep -E "^  (js-yaml|svgo)@" pnpm-lock.yaml
+          ! grep -Eq "js-yaml@(4\.[0-2]\.|4\.3\.0)" pnpm-lock.yaml
+          ! grep -Eq "svgo@(2\.[1-7]\.|2\.8\.0|3\.[0-2]\.|3\.3\.[0-2])" pnpm-lock.yaml
 
       - name: Install and build
         run: |
